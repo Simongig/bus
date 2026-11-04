@@ -1,0 +1,29 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    env:
+      TARGET: x86_64-unknown-linux-musl
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ env.TARGET }}
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: cargo test
+      - run: cargo build --release --target "$TARGET"
+      - name: Package
+        run: |
+          tar -czf "bus-${GITHUB_REF_NAME}-x86_64-linux.tar.gz" -C "target/$TARGET/release" bus
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: bus-*.tar.gz
+          generate_release_notes: true
