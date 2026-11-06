@@ -29,7 +29,7 @@ tar -xzf bus-*-x86_64-linux.tar.gz -C ~/.local/bin
 Or build from source (needs Rust and a C compiler, e.g. `sudo apt install build-essential`):
 
 ```sh
-cargo install --git https://github.com/<you>/bus
+cargo install --git https://github.com/Simongig/bus
 ```
 
 ## Use
@@ -73,3 +73,12 @@ notification lists any definition-of-done items that are still open.
 ## Data
 
 Plans are stored in SQLite at `~/.local/share/bus/bus.db`. To use another file, set `BUS_DB=/path/to/file.db`.
+
+## Development
+
+`.devcontainer/Dockerfile` is a sandbox for running Claude Code on this repo:
+
+```sh
+docker build -t bus-claude -f .devcontainer/Dockerfile .
+docker run -it --rm -v "$PWD":/workspace bus-claude
+```
