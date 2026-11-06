@@ -83,6 +83,21 @@ docker build -t bus-claude -f .devcontainer/Dockerfile .
 docker run -it --rm -v "$PWD":/workspace bus-claude
 ```
 
-Common tasks are in the `Makefile` (`make help` lists them): `make ci` runs the same checks as CI,
-`make dist` builds the static release tarball (needs `musl-tools`), and `make release` tags
-`v<version>` from `Cargo.toml` and pushes it, which triggers the release workflow.
+Common tasks are in the `Makefile` (`make help` lists them): `make ci` runs the same checks as CI
+and `make dist` builds the static release tarball (needs `musl-tools`).
+
+### Releasing
+
+Versions follow [SemVer](https://semver.org). `make release BUMP=<level>` bumps the version in
+`Cargo.toml`, commits, tags `v<version>` and pushes; the tag triggers the release workflow.
+
+| `BUMP=` | 0.1.0 → | Use for |
+|---|---|---|
+| `patch` | 0.1.1 | bug fixes |
+| `minor` | 0.2.0 | new features (before 1.0: also breaking changes) |
+| `major` | 1.0.0 | breaking changes after 1.0 |
+| `X.Y.Z` | X.Y.Z | an explicit version |
+| *(none)* | 0.1.0 | release the current version as-is |
+
+It refuses to run unless `main` is clean and in sync with `origin`, runs `make ci` first, and asks
+before changing anything (`YES=1` skips the prompt).
