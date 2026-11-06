@@ -82,3 +82,7 @@ Plans are stored in SQLite at `~/.local/share/bus/bus.db`. To use another file, 
 docker build -t bus-claude -f .devcontainer/Dockerfile .
 docker run -it --rm -v "$PWD":/workspace bus-claude
 ```
+
+Common tasks are in the `Makefile` (`make help` lists them): `make ci` runs the same checks as CI,
+`make dist` builds the static release tarball (needs `musl-tools`), and `make release` tags
+`v<version>` from `Cargo.toml` and pushes it, which triggers the release workflow.
