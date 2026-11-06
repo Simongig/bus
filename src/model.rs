@@ -27,7 +27,12 @@ pub struct Stop {
 
 impl Stop {
     pub fn new(title: impl Into<String>, start: i32, duration: i32) -> Self {
-        Self { title: title.into(), start, duration, dod: Vec::new() }
+        Self {
+            title: title.into(),
+            start,
+            duration,
+            dod: Vec::new(),
+        }
     }
 
     pub fn end(&self) -> i32 {
@@ -51,7 +56,10 @@ pub struct Day {
 
 impl Day {
     pub fn new(date: NaiveDate) -> Self {
-        Self { date, stops: Vec::new() }
+        Self {
+            date,
+            stops: Vec::new(),
+        }
     }
 
     /// Inserts a stop and pushes any later stops it overlaps.
@@ -199,16 +207,34 @@ pub fn parse_time(input: &str) -> Result<i32, String> {
 
 /// Parses `90`, `90m`, `1h`, `1h30`, `1h30m` or `1.5h`, snapped to the grid.
 pub fn parse_duration(input: &str) -> Result<i32, String> {
-    let s: String = input.trim().to_lowercase().chars().filter(|c| !c.is_whitespace()).collect();
-    let err = || format!("Can't read duration \"{}\" (try 45m, 1h30 or 90)", input.trim());
+    let s: String = input
+        .trim()
+        .to_lowercase()
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect();
+    let err = || {
+        format!(
+            "Can't read duration \"{}\" (try 45m, 1h30 or 90)",
+            input.trim()
+        )
+    };
     let minutes: f64 = match s.split_once('h') {
         Some((h, rest)) => {
             let hours: f64 = h.parse().map_err(|_| err())?;
             let rest = rest.strip_suffix('m').unwrap_or(rest);
-            let mins: f64 = if rest.is_empty() { 0.0 } else { rest.parse().map_err(|_| err())? };
+            let mins: f64 = if rest.is_empty() {
+                0.0
+            } else {
+                rest.parse().map_err(|_| err())?
+            };
             hours * 60.0 + mins
         }
-        None => s.strip_suffix('m').unwrap_or(&s).parse().map_err(|_| err())?,
+        None => s
+            .strip_suffix('m')
+            .unwrap_or(&s)
+            .parse()
+            .map_err(|_| err())?,
     };
     if !minutes.is_finite() || minutes <= 0.0 || minutes > DAY_END as f64 {
         return Err(err());
@@ -243,20 +269,31 @@ mod tests {
     }
 
     fn starts(day: &Day) -> Vec<(String, String)> {
-        day.stops.iter().map(|s| (s.title.clone(), fmt_time(s.start))).collect()
+        day.stops
+            .iter()
+            .map(|s| (s.title.clone(), fmt_time(s.start)))
+            .collect()
     }
 
     fn pairs(v: &[(&str, &str)]) -> Vec<(String, String)> {
-        v.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect()
+        v.iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect()
     }
 
     #[test]
     fn moving_later_ripples_until_a_gap_absorbs_it() {
         let mut d = day(&[("A", 540, 60), ("B", 600, 60), ("C", 720, 60)]);
         d.move_by(0, 30).unwrap();
-        assert_eq!(starts(&d), pairs(&[("A", "09:30"), ("B", "10:30"), ("C", "12:00")]));
+        assert_eq!(
+            starts(&d),
+            pairs(&[("A", "09:30"), ("B", "10:30"), ("C", "12:00")])
+        );
         d.move_by(0, 60).unwrap();
-        assert_eq!(starts(&d), pairs(&[("A", "10:30"), ("B", "11:30"), ("C", "12:30")]));
+        assert_eq!(
+            starts(&d),
+            pairs(&[("A", "10:30"), ("B", "11:30"), ("C", "12:30")])
+        );
     }
 
     #[test]
@@ -282,7 +319,10 @@ mod tests {
     fn ripple_past_midnight_fails_and_leaves_day_unchanged() {
         let mut d = day(&[("A", 1320, 60), ("B", 1380, 60)]);
         let before = d.clone();
-        assert_eq!(d.move_by(0, 15), Err("Would push \"B\" past midnight".into()));
+        assert_eq!(
+            d.move_by(0, 15),
+            Err("Would push \"B\" past midnight".into())
+        );
         assert_eq!(d, before);
     }
 

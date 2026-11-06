@@ -43,14 +43,33 @@ fn start_body(stop: &Stop) -> String {
 fn end_alert(stop: &Stop, next: Option<&Stop>) -> Alert {
     let summary = match next {
         Some(n) if n.start == stop.end() => {
-            format!("■ {} done → ▶ {} · {}", stop.title, n.title, fmt_duration(n.duration))
+            format!(
+                "■ {} done → ▶ {} · {}",
+                stop.title,
+                n.title,
+                fmt_duration(n.duration)
+            )
         }
-        Some(n) => format!("■ {} done → next: {} {}", stop.title, n.title, fmt_time(n.start)),
+        Some(n) => format!(
+            "■ {} done → next: {} {}",
+            stop.title,
+            n.title,
+            fmt_time(n.start)
+        ),
         None => format!("■ {} done", stop.title),
     };
-    let open: Vec<&str> = stop.dod.iter().filter(|d| !d.done).map(|d| d.text.as_str()).collect();
+    let open: Vec<&str> = stop
+        .dod
+        .iter()
+        .filter(|d| !d.done)
+        .map(|d| d.text.as_str())
+        .collect();
     let body = if open.is_empty() {
-        if stop.dod.is_empty() { String::new() } else { "All done ✓".into() }
+        if stop.dod.is_empty() {
+            String::new()
+        } else {
+            "All done ✓".into()
+        }
     } else {
         format!("Still open:\n• {}", open.join("\n• "))
     };
@@ -64,10 +83,14 @@ fn end_alert(stop: &Stop, next: Option<&Stop>) -> Alert {
 pub fn status_line(day: &Day, minute: i32, format: Option<&str>) -> String {
     let (current, next) = day.current_and_next(minute);
     let title = current.map(|s| s.title.clone()).unwrap_or_default();
-    let left = current.map(|s| fmt_duration(s.end() - minute)).unwrap_or_default();
+    let left = current
+        .map(|s| fmt_duration(s.end() - minute))
+        .unwrap_or_default();
     let next_title = next.map(|s| s.title.clone()).unwrap_or_default();
     let next_start = next.map(|s| fmt_time(s.start)).unwrap_or_default();
-    let next_in = next.map(|s| fmt_duration(s.start - minute)).unwrap_or_default();
+    let next_in = next
+        .map(|s| fmt_duration(s.start - minute))
+        .unwrap_or_default();
 
     if let Some(format) = format {
         return format
@@ -98,8 +121,14 @@ mod tests {
         let mut day = Day::new(NaiveDate::from_ymd_opt(2026, 11, 4).unwrap());
         let mut work = Stop::new("Deep work", 540, 90);
         work.dod = vec![
-            DodItem { text: "draft".into(), done: true },
-            DodItem { text: "review".into(), done: false },
+            DodItem {
+                text: "draft".into(),
+                done: true,
+            },
+            DodItem {
+                text: "review".into(),
+                done: false,
+            },
         ];
         day.insert(work).unwrap();
         day.insert(Stop::new("Break", 630, 15)).unwrap();
@@ -142,6 +171,9 @@ mod tests {
         assert_eq!(status_line(&d, 700, None), "free 50m → Lunch 12:30");
         assert_eq!(status_line(&d, 780, None), "Lunch 30m");
         assert_eq!(status_line(&d, 900, None), "free");
-        assert_eq!(status_line(&d, 588, Some("[{title}|{left}]")), "[Deep work|42m]");
+        assert_eq!(
+            status_line(&d, 588, Some("[{title}|{left}]")),
+            "[Deep work|42m]"
+        );
     }
 }

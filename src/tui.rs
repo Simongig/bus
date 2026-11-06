@@ -180,7 +180,10 @@ impl App {
             let index = match item {
                 Some(i) if i < dod.len() => i,
                 Some(_) => return Err("No such item".into()),
-                None => dod.iter().position(|d| !d.done).ok_or("Nothing left to check ✓")?,
+                None => dod
+                    .iter()
+                    .position(|d| !d.done)
+                    .ok_or("Nothing left to check ✓")?,
             };
             dod[index].done = !dod[index].done;
             Ok(stop)
@@ -223,7 +226,10 @@ impl App {
         if self.day.date == date {
             return schedule::alerts(&self.day, from, to);
         }
-        self.store.load_day(date).map(|day| schedule::alerts(&day, from, to)).unwrap_or_default()
+        self.store
+            .load_day(date)
+            .map(|day| schedule::alerts(&day, from, to))
+            .unwrap_or_default()
     }
 
     // ── Keys ────────────────────────────────────────────────────────────
@@ -285,7 +291,10 @@ impl App {
                 }
             }
             KeyCode::Char('a') => {
-                self.mode = Mode::Form(Form::new_stop(self.default_start(DEFAULT_START), DEFAULT_DURATION));
+                self.mode = Mode::Form(Form::new_stop(
+                    self.default_start(DEFAULT_START),
+                    DEFAULT_DURATION,
+                ));
             }
             KeyCode::Char('e') | KeyCode::Enter => {
                 if let Some(i) = sel {
@@ -365,9 +374,14 @@ impl App {
     // ── Drawing ─────────────────────────────────────────────────────────
 
     fn draw(&mut self, f: &mut Frame) {
-        let [header, body, footer] =
-            Layout::vertical([Constraint::Length(1), Constraint::Min(3), Constraint::Length(1)]).areas(f.area());
-        let [route, details] = Layout::horizontal([Constraint::Min(30), Constraint::Length(42)]).areas(body);
+        let [header, body, footer] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(3),
+            Constraint::Length(1),
+        ])
+        .areas(f.area());
+        let [route, details] =
+            Layout::horizontal([Constraint::Min(30), Constraint::Length(42)]).areas(body);
         self.draw_header(f, header);
         self.draw_route(f, route);
         self.draw_details(f, details);
@@ -388,7 +402,13 @@ impl App {
             _ => "",
         };
         let line = Line::from(vec![
-            Span::styled(" bus ", Style::new().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " bus ",
+                Style::new()
+                    .fg(Color::Black)
+                    .bg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::styled(
                 format!(" {}{tag}", self.day.date.format("%a %d %b %Y")),
                 Style::new().add_modifier(Modifier::BOLD),
@@ -409,7 +429,13 @@ impl App {
     fn view_bounds(&self, now_min: Option<i32>) -> (i32, i32) {
         let mut first = VIEW_START;
         let mut last = VIEW_END;
-        for t in self.day.stops.iter().flat_map(|s| [s.start, s.end()]).chain(now_min) {
+        for t in self
+            .day
+            .stops
+            .iter()
+            .flat_map(|s| [s.start, s.end()])
+            .chain(now_min)
+        {
             first = first.min(t);
             last = last.max(t + 1);
         }
@@ -428,7 +454,10 @@ impl App {
         let row_of = |m: i32| ((m - start) / GRID) as usize;
 
         let target = match self.selected_index() {
-            Some(i) => Some((row_of(self.day.stops[i].start), row_of(self.day.stops[i].end() - 1))),
+            Some(i) => Some((
+                row_of(self.day.stops[i].start),
+                row_of(self.day.stops[i].end() - 1),
+            )),
             None => now_min.map(|m| (row_of(m), row_of(m))),
         };
         if let Some((first, last)) = target {
@@ -449,9 +478,16 @@ impl App {
         let mut lines = Vec::with_capacity(height);
         for row in self.scroll..(self.scroll + height).min(rows) {
             let t = start + row as i32 * GRID;
-            let label = if t % 60 == 0 { fmt_time(t) } else { " ".repeat(5) };
+            let label = if t % 60 == 0 {
+                fmt_time(t)
+            } else {
+                " ".repeat(5)
+            };
             let marker = if now_min.is_some_and(|m| t <= m && m < t + GRID) {
-                Span::styled("▶", Style::new().fg(Color::Red).add_modifier(Modifier::BOLD))
+                Span::styled(
+                    "▶",
+                    Style::new().fg(Color::Red).add_modifier(Modifier::BOLD),
+                )
             } else {
                 Span::raw(" ")
             };
@@ -459,7 +495,12 @@ impl App {
                 Some(i) => {
                     let stop = &self.day.stops[i];
                     let text = if t == stop.start {
-                        format!(" {} · {}{}", stop.title, fmt_duration(stop.duration), dod_progress(stop))
+                        format!(
+                            " {} · {}{}",
+                            stop.title,
+                            fmt_duration(stop.duration),
+                            dod_progress(stop)
+                        )
                     } else {
                         String::new()
                     };
@@ -468,7 +509,12 @@ impl App {
                 None => {
                     let gap_begins = t == start || self.day.stops.iter().any(|s| s.end() == t);
                     let text = if gap_begins {
-                        let until = self.day.stops.iter().find(|s| s.start > t).map_or(end, |s| s.start);
+                        let until = self
+                            .day
+                            .stops
+                            .iter()
+                            .find(|s| s.start > t)
+                            .map_or(end, |s| s.start);
                         format!(" free {}", fmt_duration(until - t))
                     } else {
                         String::new()
@@ -492,12 +538,16 @@ impl App {
             Color::Blue
         } else if now_min.is_some_and(|m| stop.contains(m)) {
             Color::Green
-        } else if index % 2 == 0 {
+        } else if index.is_multiple_of(2) {
             Color::Indexed(238)
         } else {
             Color::Indexed(240)
         };
-        let fg = if bg == Color::Green { Color::Black } else { Color::White };
+        let fg = if bg == Color::Green {
+            Color::Black
+        } else {
+            Color::White
+        };
         Style::new().fg(fg).bg(bg).add_modifier(Modifier::BOLD)
     }
 
@@ -509,20 +559,39 @@ impl App {
             return;
         };
         let mut lines = vec![
-            Line::styled(stop.title.clone(), Style::new().add_modifier(Modifier::BOLD)),
             Line::styled(
-                format!("{}–{} · {}", fmt_time(stop.start), fmt_time(stop.end()), fmt_duration(stop.duration)),
+                stop.title.clone(),
+                Style::new().add_modifier(Modifier::BOLD),
+            ),
+            Line::styled(
+                format!(
+                    "{}–{} · {}",
+                    fmt_time(stop.start),
+                    fmt_time(stop.end()),
+                    fmt_duration(stop.duration)
+                ),
                 Style::new().fg(Color::Gray),
             ),
             Line::default(),
-            Line::styled("Definition of done", Style::new().add_modifier(Modifier::UNDERLINED)),
+            Line::styled(
+                "Definition of done",
+                Style::new().add_modifier(Modifier::UNDERLINED),
+            ),
         ];
         if stop.dod.is_empty() {
-            lines.push(Line::styled("(none; e to edit)", Style::new().fg(Color::DarkGray)));
+            lines.push(Line::styled(
+                "(none; e to edit)",
+                Style::new().fg(Color::DarkGray),
+            ));
         }
         for (n, item) in stop.dod.iter().enumerate() {
             let (check, style) = if item.done {
-                ("[x]", Style::new().fg(Color::DarkGray).add_modifier(Modifier::CROSSED_OUT))
+                (
+                    "[x]",
+                    Style::new()
+                        .fg(Color::DarkGray)
+                        .add_modifier(Modifier::CROSSED_OUT),
+                )
             } else {
                 ("[ ]", Style::new())
             };
@@ -531,12 +600,20 @@ impl App {
                 Span::styled(item.text.clone(), style),
             ]));
         }
-        f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: false }).block(block), area);
+        f.render_widget(
+            Paragraph::new(lines)
+                .wrap(Wrap { trim: false })
+                .block(block),
+            area,
+        );
     }
 
     fn draw_footer(&self, f: &mut Frame, area: Rect) {
         let line = if let (Mode::ConfirmDelete, Some(i)) = (&self.mode, self.selected_index()) {
-            Line::styled(format!(" Delete \"{}\"? y/n", self.day.stops[i].title), Style::new().fg(Color::Yellow))
+            Line::styled(
+                format!(" Delete \"{}\"? y/n", self.day.stops[i].title),
+                Style::new().fg(Color::Yellow),
+            )
         } else if let Some(msg) = &self.message {
             Line::styled(format!(" {msg}"), Style::new().fg(Color::Yellow))
         } else {
@@ -561,14 +638,19 @@ fn dod_progress(stop: &Stop) -> String {
 fn pad(text: &str, width: usize) -> String {
     let mut s: String = text.chars().take(width).collect();
     let len = s.chars().count();
-    s.extend(std::iter::repeat(' ').take(width - len));
+    s.extend(std::iter::repeat_n(' ', width - len));
     s
 }
 
 fn centered(area: Rect, width: u16, height: u16) -> Rect {
     let width = width.min(area.width);
     let height = height.min(area.height);
-    Rect::new(area.x + (area.width - width) / 2, area.y + (area.height - height) / 2, width, height)
+    Rect::new(
+        area.x + (area.width - width) / 2,
+        area.y + (area.height - height) / 2,
+        width,
+        height,
+    )
 }
 
 fn draw_help(f: &mut Frame) {
@@ -601,13 +683,22 @@ fn draw_help(f: &mut Frame) {
         " Moving or growing a stop pushes the ones it overlaps.",
         Style::new().fg(Color::Gray),
     ));
-    lines.push(Line::styled(" Free time absorbs the push.", Style::new().fg(Color::Gray)));
+    lines.push(Line::styled(
+        " Free time absorbs the push.",
+        Style::new().fg(Color::Gray),
+    ));
     lines.push(Line::default());
-    lines.push(Line::styled(" Press any key to close", Style::new().fg(Color::DarkGray)));
+    lines.push(Line::styled(
+        " Press any key to close",
+        Style::new().fg(Color::DarkGray),
+    ));
 
     let area = centered(f.area(), 60, lines.len() as u16 + 2);
     f.render_widget(Clear, area);
-    f.render_widget(Paragraph::new(lines).block(Block::bordered().title(" Keys ")), area);
+    f.render_widget(
+        Paragraph::new(lines).block(Block::bordered().title(" Keys ")),
+        area,
+    );
 }
 
 // ── Form ────────────────────────────────────────────────────────────────
@@ -754,8 +845,15 @@ impl Form {
             field_line(Field::Duration, "Duration", &self.duration),
             Line::default(),
             Line::styled(
-                format!("{} Definition of done (one per line)", if self.field == Field::Dod { ">" } else { " " }),
-                Style::new().fg(if self.field == Field::Dod { Color::Yellow } else { Color::Gray }),
+                format!(
+                    "{} Definition of done (one per line)",
+                    if self.field == Field::Dod { ">" } else { " " }
+                ),
+                Style::new().fg(if self.field == Field::Dod {
+                    Color::Yellow
+                } else {
+                    Color::Gray
+                }),
             ),
         ];
         for (i, text) in self.dod.iter().enumerate() {
@@ -767,12 +865,25 @@ impl Form {
         }
         lines.push(Line::default());
         let hint = Style::new().fg(Color::DarkGray);
-        lines.push(Line::styled("  Tab/↑↓ fields · Enter next field / new item", hint));
-        lines.push(Line::styled("  Enter on empty item or Ctrl+S saves · Esc cancels", hint));
+        lines.push(Line::styled(
+            "  Tab/↑↓ fields · Enter next field / new item",
+            hint,
+        ));
+        lines.push(Line::styled(
+            "  Enter on empty item or Ctrl+S saves · Esc cancels",
+            hint,
+        ));
 
-        let title = if self.editing.is_some() { " Edit stop " } else { " New stop " };
+        let title = if self.editing.is_some() {
+            " Edit stop "
+        } else {
+            " New stop "
+        };
         let area = centered(f.area(), 60, lines.len() as u16 + 2);
         f.render_widget(Clear, area);
-        f.render_widget(Paragraph::new(lines).block(Block::bordered().title(title)), area);
+        f.render_widget(
+            Paragraph::new(lines).block(Block::bordered().title(title)),
+            area,
+        );
     }
 }

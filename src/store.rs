@@ -45,15 +45,18 @@ impl SqliteStore {
         if let Some(path) = std::env::var_os("BUS_DB") {
             return Ok(path.into());
         }
-        let dir = dirs::data_dir().context("Can't find a data directory ($XDG_DATA_HOME or ~/.local/share)")?;
+        let dir = dirs::data_dir()
+            .context("Can't find a data directory ($XDG_DATA_HOME or ~/.local/share)")?;
         Ok(dir.join("bus").join("bus.db"))
     }
 
     pub fn open(path: &Path) -> Result<Self> {
         if let Some(dir) = path.parent() {
-            std::fs::create_dir_all(dir).with_context(|| format!("Can't create {}", dir.display()))?;
+            std::fs::create_dir_all(dir)
+                .with_context(|| format!("Can't create {}", dir.display()))?;
         }
-        let conn = Connection::open(path).with_context(|| format!("Can't open {}", path.display()))?;
+        let conn =
+            Connection::open(path).with_context(|| format!("Can't open {}", path.display()))?;
         // WAL lets `bus now` read while the TUI writes.
         conn.query_row("PRAGMA journal_mode = WAL", [], |_| Ok(()))?;
         Self::init(conn)
@@ -69,7 +72,9 @@ impl SqliteStore {
         conn.pragma_update(None, "foreign_keys", true)?;
         let version: i32 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
         if version < 1 {
-            conn.execute_batch(&format!("BEGIN; {SCHEMA_V1} PRAGMA user_version = 1; COMMIT;"))?;
+            conn.execute_batch(&format!(
+                "BEGIN; {SCHEMA_V1} PRAGMA user_version = 1; COMMIT;"
+            ))?;
         }
         Ok(Self { conn })
     }
@@ -82,16 +87,25 @@ impl Store for SqliteStore {
             .prepare_cached("SELECT id, start_min, duration_min, title FROM stops WHERE date = ?1 ORDER BY start_min")?;
         let rows = stops_stmt
             .query_map(params![date.to_string()], |r| {
-                Ok((r.get::<_, i64>(0)?, Stop::new(r.get::<_, String>(3)?, r.get(1)?, r.get(2)?)))
+                Ok((
+                    r.get::<_, i64>(0)?,
+                    Stop::new(r.get::<_, String>(3)?, r.get(1)?, r.get(2)?),
+                ))
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
 
-        let mut items_stmt =
-            self.conn.prepare_cached("SELECT text, done FROM dod_items WHERE stop_id = ?1 ORDER BY position")?;
+        let mut items_stmt = self.conn.prepare_cached(
+            "SELECT text, done FROM dod_items WHERE stop_id = ?1 ORDER BY position",
+        )?;
         let mut day = Day::new(date);
         for (id, mut stop) in rows {
             stop.dod = items_stmt
-                .query_map(params![id], |r| Ok(DodItem { text: r.get(0)?, done: r.get(1)? }))?
+                .query_map(params![id], |r| {
+                    Ok(DodItem {
+                        text: r.get(0)?,
+                        done: r.get(1)?,
+                    })
+                })?
                 .collect::<rusqlite::Result<_>>()?;
             day.stops.push(stop);
         }
@@ -134,8 +148,14 @@ mod tests {
         let mut day = Day::new(date(4));
         let mut stop = Stop::new("Deep work", 540, 90);
         stop.dod = vec![
-            DodItem { text: "draft".into(), done: true },
-            DodItem { text: "review".into(), done: false },
+            DodItem {
+                text: "draft".into(),
+                done: true,
+            },
+            DodItem {
+                text: "review".into(),
+                done: false,
+            },
         ];
         day.insert(stop).unwrap();
         day.insert(Stop::new("Lunch", 720, 60)).unwrap();
